@@ -1,0 +1,226 @@
+---
+title: "Spiny Mouse Nonapeptide Receptor Project"
+author: "Jeanne Powell"
+output: word_document
+---
+
+```{r, echo = FALSE, warning = FALSE}
+#required packages
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(scales)
+library(effsize)
+```
+
+#OTR Autoradiography
+
+```{r, echo=FALSE}
+#import data
+otr = read_excel("/Users/jeannepowell/Library/CloudStorage/OneDrive-EmoryUniversity/Projects/Spiny\ Mouse\ Nonapeptide\ Receptors/Spiny\ Mouse\ Nonapeptide\ Receptor\ Data.xlsx", sheet = "OTR Clean Data")
+
+v1ar = read_excel("/Users/jeannepowell/Library/CloudStorage/OneDrive-EmoryUniversity/Projects/Spiny\ Mouse\ Nonapeptide\ Receptors/Spiny\ Mouse\ Nonapeptide\ Receptor\ Data.xlsx", sheet = "V1aR Clean Data")
+```
+
+
+
+#OTR t tests
+Analysis methods were taken from Freeman et al. squirrel study
+```{r, echo=FALSE}
+#t-tests with standard p and p-values corrected for multiple comparisons using the Hochberg method
+
+#runs individual t.test for each ROI, returns p value, t-statistic, df
+t.test.results <- function(x) {
+  c(t.test(Binding.Corrected~Sex, x)$estimate[2], #mean in group Male
+    sd(subset(x, x$Sex == "Male")$Binding.Corrected, na.rm = TRUE), #sd Male
+    dplyr::count(subset(x, Sex == "Male" & Binding.Corrected > 0)), # n of males
+    t.test(Binding.Corrected~Sex, x)$estimate[1], #mean in group Female
+    sd(subset(x, x$Sex == "Female")$Binding.Corrected, na.rm = TRUE),#sd Female
+    dplyr::count(subset(x, Sex == "Female" & Binding.Corrected > 0)), # n of females
+    t.test(Binding.Corrected~Sex, x)$statistic, #t statistic
+    t.test(Binding.Corrected~Sex, alternative = "two.sided", var.equal = FALSE,x)$parameter, #df
+    t.test(Binding.Corrected~Sex, x)$p.value, #p-value
+    cohen.d(Binding.Corrected ~ Sex, data = x)$estimate, #cohen's d
+    cohen.d(Binding.Corrected ~ Sex, data = x)$magnitude, #size of effect, negligible < small < medium < large
+    shapiro.test(x$Binding.Corrected)$statistic,#shapiro wilk w statistic
+    shapiro.test(x$Binding.Corrected)$p.value) #shapiro wilk p value
+  
+    }
+
+otr.t.test = as.data.frame(do.call("rbind",lapply(split(otr, otr$ROI), t.test.results)))
+
+
+#Convert rownames to column & name it "ROI"
+otr.t.test = tibble::rownames_to_column(otr.t.test, "ROI")
+
+#Rename p, male sd, female sd columns, 
+otr.t.test = otr.t.test %>% 
+  dplyr::rename(male.sd = V2,
+         male.n = n,
+         female.sd = V5,
+         female.n = n.1,
+         p.uncorrected = V9,
+         d = V10,
+         magnitude = V11 #1: negligible, #2: small, #3: medium: #large
+         )
+
+
+#Perform pvalue correction and append to dataframe
+otr.t.test$p.corrected = p.adjust(otr.t.test$p.uncorrected, method = "hochberg")
+```
+
+```{r, echo=FALSE}
+#+++++++++++++++++++++++++
+# Function to calculate the mean and the standard deviation
+  # for each group
+#+++++++++++++++++++++++++
+# data : a data frame
+# varname : the name of a column containing the variable
+  #to be summariezed
+# groupnames : vector of column names to be used as
+  # grouping variables
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+```
+#OTR visualization
+```{r, echo=FALSE}
+#OTR visualization
+otr$ROI <- factor(otr$ROI,levels=c("AOB","AOA","MOB","Cg","DI","Caudal CPu","LS","AcbSh","BNSTa","BNSTp","VP","AH","VMH","ZI","PVA", "AHAL","BLA","CeA","MeA","CA1py","PAG"))
+
+otr.vis <- data_summary(otr, varname="Binding.Corrected", 
+                    groupnames=c("ROI", "Sex"))
+
+
+ggplot(otr, aes(x = ROI, y = Binding.Corrected, fill = Sex))+
+  geom_bar(stat = "summary", position=position_dodge(), fun.y = "mean",color = "black")+
+  geom_point(position = position_dodge(.9),size = .75, colour = "dark gray")+
+  geom_errorbar(data = otr.vis,aes(ymin=Binding.Corrected-sd, ymax=Binding.Corrected+sd),
+                width=.2,position=position_dodge(.9))+
+  #themes
+  scale_fill_manual(values=c("white", "black"))+
+  theme_classic()+
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),text = element_text(size = 8))+
+  scale_y_continuous(name="OTR Binding (grayvalue)")+
+  scale_x_discrete(name ="")+
+  #annotations
+  annotate("text", x = 12, y = 100, label = "*", size = 12)+
+  annotate("text", x = 16, y = 160, label = "*", size = 12)+
+  annotate("text", x = 9, y = 100, label = "*", size = 12)+
+  annotate("text", x = 10, y = 125, label = "*", size = 12)
+
+ggsave(file="OTR_autorad.pdf", width=6.5, height=4, dpi=300)  
+
+```
+
+
+
+
+#V1aR visualization
+```{r, echo=FALSE}
+#V1aR
+v1ar$ROI <- factor(v1ar$ROI,levels=c("AOB","AOA","MOBgl","PIR","TT","AI","Cg","LS","Acb","OT","BNSTa","BNSTp","VDB","GP","VP","AH","LH","MM","MPO","VMH","ZI","LD","MG","PVA","Re","VPL","BLA","CeA","MeA","APT","IP","PAG","PVG","SCm","SuG"))
+
+V1aR.vis <- data_summary(v1ar, varname="Corrected", 
+                    groupnames=c("ROI", "Sex"))
+
+v1ar.1 = subset(v1ar, Region == "Olfactory" | Region == "Cortex" | Region == "Striatum" | Region == "Pallidum")
+V1aR.vis.1 <- data_summary(v1ar.1, varname="Corrected", 
+                    groupnames=c("ROI", "Sex"))
+
+ggplot(v1ar.1, aes(x = ROI, y = Corrected, fill = Sex))+
+  geom_bar(stat = "summary", position=position_dodge(), fun.y = "mean",color = "black")+
+  geom_point(position = position_dodge(.9),size = .75, colour = "dark gray")+
+  geom_errorbar(data = V1aR.vis.1,aes(ymin=Corrected-sd, ymax=Corrected+sd),
+                width=.2,position=position_dodge(.9))+
+  #themes
+  scale_fill_manual(values=c("white", "black"))+
+  theme_classic()+
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),text = element_text(size = 8))+
+  scale_y_continuous(name="OTR Binding (grayvalue)")+
+  scale_x_discrete(name ="")
+
+ggsave(file="V1aR_autorad1.pdf", width=6.5, height=4, dpi=300)  
+
+v1ar.2 = subset(v1ar, Region == "Hypothalamus" | Region == "Thalamus" | Region == "Amygdala" | Region == "Midbrain")
+V1aR.vis.2 <- data_summary(v1ar.2, varname="Corrected", 
+                    groupnames=c("ROI", "Sex"))
+
+ggplot(v1ar.2, aes(x = ROI, y = Corrected, fill = Sex))+
+  geom_bar(stat = "summary", position=position_dodge(), fun.y = "mean",color = "black")+
+  geom_point(position = position_dodge(.9),size = .75, colour = "dark gray")+
+  geom_errorbar(data = V1aR.vis.2,aes(ymin=Corrected-sd, ymax=Corrected+sd),
+                width=.2,position=position_dodge(.9))+
+  #themes
+  scale_fill_manual(values=c("white", "black"))+
+  theme_classic()+
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),text = element_text(size = 8))+
+  scale_y_continuous(name="OTR Binding (grayvalue)")+
+  scale_x_discrete(name ="")
+
+ggsave(file="V1aR_autorad2.pdf", width=6.5, height=4, dpi=300)  
+
+```
+
+
+#v1aR analysis
+Analysis methods were taken from Freeman et al. squirrel study
+```{r, echo=FALSE}
+#t-tests with standard p and p-values corrected for multiple comparisons using the Hochberg method
+
+#runs individual t.test for each ROI, returns p value, t-statistic, df
+t.test.results <- function(x) {
+  c(t.test(Corrected~Sex, x)$estimate[2], #mean in group Male
+    sd(subset(x, x$Sex == "Male")$Corrected, na.rm = TRUE), #sd Male
+    dplyr::count(subset(x, Sex == "Male" & Corrected > 0)), # n of males
+    t.test(Corrected~Sex, x)$estimate[1], #mean in group Female
+    sd(subset(x, x$Sex == "Female")$Corrected, na.rm = TRUE),#sd Female
+    dplyr::count(subset(x, Sex == "Female" & Corrected > 0)), # n of females
+    t.test(Corrected~Sex, x)$statistic, #t statistic
+    t.test(Corrected~Sex, x)$parameter, #df
+    t.test(Corrected~Sex, x)$p.value, #p-value
+    cohen.d(Corrected ~ Sex, data = x)$estimate, #cohen's d
+    cohen.d(Corrected ~ Sex, data = x)$magnitude,
+    shapiro.test(x$Corrected)$statistic,#shapiro wilk w statistic
+    shapiro.test(x$Corrected)$p.value) #shapiro wilk p value)
+}
+
+v1ar.t.test = as.data.frame(do.call("rbind",lapply(split(v1ar, v1ar$ROI), t.test.results)))
+
+#Convert rownames to column & name it "ROI"
+v1ar.t.test = tibble::rownames_to_column(v1ar.t.test, "ROI")
+
+#Rename p, male sd, female sd columns, 
+v1ar.t.test = 
+  v1ar.t.test %>% 
+  dplyr::rename(p = V9, 
+         male.sd = V2,
+         male.n = n,
+         female.sd = V5,
+         female.n = n.1)
+
+#Perform pvalue correction and append to dataframe
+v1ar.t.test$p.corrected = p.adjust(v1ar.t.test$p, method = "hochberg")
+
+```
+
+```{r, echo=FALSE}
+library(lmerTest) 
+library(emmeans)
+#receptor distribution using a linear mixed model with indiviudal as random effect and sex and ROI 
+otr.model = lmer(Binding.Corrected ~ ROI*Sex + (1|ID), otr)
+anova(otr.model)
+emmeans(otr.model, list(pairwise ~ Sex|ROI), adjust = "hochberg")
+
+v1ar.model = lmer(Corrected ~ ROI*Sex + (1|ID), v1ar)
+anova(v1ar.model)
+```
