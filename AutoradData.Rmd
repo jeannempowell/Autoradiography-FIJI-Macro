@@ -95,7 +95,7 @@ data_summary <- function(data, varname, groupnames){
 #OTR visualization
 ```{r, echo=FALSE}
 #OTR visualization
-otr$ROI <- factor(otr$ROI,levels=c("AOB","AOA","MOB","Cg","DI","Caudal CPu","LS","AcbSh","BNSTa","BNSTp","VP","AH","VMH","ZI","PVA", "AHAL","BLA","CeA","MeA","CA1py","PAG"))
+#otr$ROI <- factor(otr$ROI,levels=c("AOB","AOA","MOB","Cg","DI","Caudal CPu","LS","AcbSh","BNSTa","BNSTp","VP","AH","VMH","ZI","PVA", #"AHAL","BLA","CeA","MeA","CA1py","PAG"))
 
 otr.vis <- data_summary(otr, varname="Binding.Corrected", 
                     groupnames=c("ROI", "Sex"))
@@ -113,10 +113,10 @@ ggplot(otr, aes(x = ROI, y = Binding.Corrected, fill = Sex))+
   scale_y_continuous(name="OTR Binding (grayvalue)")+
   scale_x_discrete(name ="")+
   #annotations
-  annotate("text", x = 12, y = 100, label = "*", size = 12)+
-  annotate("text", x = 16, y = 160, label = "*", size = 12)+
-  annotate("text", x = 9, y = 100, label = "*", size = 12)+
-  annotate("text", x = 10, y = 125, label = "*", size = 12)
+  annotate("text", x = 2, y = 100, label = "*", size = 12)+ #AH
+  annotate("text", x = 3, y = 160, label = "*", size = 12)+ #AHAL
+  annotate("text", x = 7, y = 100, label = "*", size = 12)+ #BNSTa
+  annotate("text", x = 8, y = 125, label = "*", size = 12) #BNSTp
 
 ggsave(file="OTR_autorad.pdf", width=6.5, height=4, dpi=300)  
 
@@ -128,12 +128,14 @@ ggsave(file="OTR_autorad.pdf", width=6.5, height=4, dpi=300)
 #V1aR visualization
 ```{r, echo=FALSE}
 #V1aR
-v1ar$ROI <- factor(v1ar$ROI,levels=c("AOB","AOA","MOBgl","PIR","TT","AI","Cg","LS","Acb","OT","BNSTa","BNSTp","VDB","GP","VP","AH","LH","MM","MPO","VMH","ZI","LD","MG","PVA","Re","VPL","BLA","CeA","MeA","APT","IP","PAG","PVG","SCm","SuG"))
+#v1ar$ROI <- factor(v1ar$ROI,levels=c("AOB","AOA","MOBgl","PIR","TT","AI","Cg","LS","Acb","OT","BNSTa","BNSTp","VDB","GP","VP","AH","LH","#MM","MPO","VMH","ZI","LD","MG","PVA","Re","VPL","BLA","CeA","MeA","APT","IP","PAG","PVG","SCm","SuG"))
 
-V1aR.vis <- data_summary(v1ar, varname="Corrected", 
-                    groupnames=c("ROI", "Sex"))
+#V1aR.vis <- data_summary(v1ar, varname="Corrected", 
+#                    groupnames=c("ROI", "Sex"))
 
-v1ar.1 = subset(v1ar, Region == "Olfactory" | Region == "Cortex" | Region == "Striatum" | Region == "Pallidum")
+
+#v1ar.1 = subset(v1ar, Region == "Olfactory" | Region == "Cortex" | Region == "Striatum" | Region == "Pallidum")
+v1ar.1 = v1ar[1:272,]
 V1aR.vis.1 <- data_summary(v1ar.1, varname="Corrected", 
                     groupnames=c("ROI", "Sex"))
 
@@ -146,12 +148,13 @@ ggplot(v1ar.1, aes(x = ROI, y = Corrected, fill = Sex))+
   scale_fill_manual(values=c("white", "black"))+
   theme_classic()+
   theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),text = element_text(size = 8))+
-  scale_y_continuous(name="OTR Binding (grayvalue)")+
+  scale_y_continuous(name="V1aR Binding (grayvalue)")+
   scale_x_discrete(name ="")
 
 ggsave(file="V1aR_autorad1.pdf", width=6.5, height=4, dpi=300)  
 
-v1ar.2 = subset(v1ar, Region == "Hypothalamus" | Region == "Thalamus" | Region == "Amygdala" | Region == "Midbrain")
+#v1ar.2 = subset(v1ar, Region == "Hypothalamus" | Region == "Thalamus" | Region == "Amygdala" | Region == "Midbrain")
+v1ar.2 = v1ar[273:560,]
 V1aR.vis.2 <- data_summary(v1ar.2, varname="Corrected", 
                     groupnames=c("ROI", "Sex"))
 
@@ -164,7 +167,7 @@ ggplot(v1ar.2, aes(x = ROI, y = Corrected, fill = Sex))+
   scale_fill_manual(values=c("white", "black"))+
   theme_classic()+
   theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),text = element_text(size = 8))+
-  scale_y_continuous(name="OTR Binding (grayvalue)")+
+  scale_y_continuous(name="V1aR Binding (grayvalue)")+
   scale_x_discrete(name ="")
 
 ggsave(file="V1aR_autorad2.pdf", width=6.5, height=4, dpi=300)  
